@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Grocery App Bilingual</title>
+  <style>
+    /* ------------------------------
+       BASIC STYLES & RESET
+    ------------------------------- */
+    * {
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #f6f9fc;
+      color: #333;
+      padding: 10px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #4c8bf5;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+    }
+    h1 {
+      margin: 0; 
+      font-size: 1.5rem;
+    }
+
+    /* ------------------------------
+       TAB NAV & CONTENT
+    ------------------------------- */
+    .tab-nav {
+      display: flex;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+    .tab-nav button {
+      flex: 1;
+      padding: 1rem;
+      cursor: pointer;
+      border: none;
+      background: #f7f7f7;
+      font-size: 1rem;
+      transition: background 0.3s;
+    }
+    .tab-nav button.active {
+      background: #4c8bf5;
+      color: #fff;
+      font-weight: bold;
+    }
+    .tab-nav button:hover {
+      background: #e0e0e0;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 1rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ------------------------------
+       FORMS & INPUTS
+    ------------------------------- */
+    .section {
+      margin-bottom: 1.5rem;
+    }
+    .section h2 {
+      margin-bottom: 0.5rem;
+    }
+    .label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+    input, select, textarea, button {
+      font-size: 1rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .btn-primary {
+      background: #4c8bf5; color: #fff;
+    }
+    .btn-success {
+      background: #28a745; color: #fff;
+    }
+    .btn-danger {
+      background: #dc3545; color: #fff;
+    }
+    .btn-warning {
+      background: #ffc107; color: #000;
+    }
+
+    /* ------------------------------
+       LISTS & ITEMS
+    ------------------------------- */
+    .item-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0;
+    }
+    .item {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      align-items: center;
+    }
+    .item span {
+      margin-right: 0.5rem;
+    }
+    .completed {
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+
+    /* ------------------------------
+       MISC
+    ------------------------------- */
+    #apiKeySection {
+      text-align: center;
+      padding: 2rem;
+    }
+    .hide { 
+      display: none; 
+    }
+    .info-text {
+      white-space: pre-wrap;
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .language-selector {
+      margin-bottom: 10px; 
+      text-align: right;
+      padding-right: 1rem;
+    }
+    .language-selector select {
+      width: auto; 
+      padding: 0.3rem 0.5rem;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1 id="appTitle">Grocery App</h1>
+  </header>
+
+  <!-- SELECT LANGUAGE -->
+  <div class="language-selector">
+    <label for="languageSelect" id="languageLabel">Language:</label>
+    <select id="languageSelect">
+      <option value="es">Español</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+
+  <!-- API Key Prompt -->
+  <div id="apiKeySection" class="hide">
+    <h2 id="apiTitleKey">Configurar API Key</h2>
+    <p id="apiKeyMessage">
+      Ingresa tu clave de OpenAI (se guardará localmente y no volverá a pedirse).
+    </p>
+    <input type="text" id="apiKeyInput" placeholder="sk-..." />
+    <br/>
+    <button class="btn-primary" id="saveApiKeyBtn">Guardar</button>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-nav hide" id="tabNav">
+    <!-- Reordenamos: ingredientes casa, alergias, plan, lista, ruta, recetas -->
+    <button data-tab="tabKitchen" class="active">En Casa</button>
+    <button data-tab="tabAllergies">Alergias</button>
+    <button data-tab="tabMealPlanner">Plan Semanal</button>
+    <button data-tab="tabGrocery">Mi Lista</button>
+    <button data-tab="tabRoute">Ruta Tienda</button>
+    <button data-tab="tabRecipes">Recetas</button>
+  </div>
+
+  <!-- TABS CONTENT -->
+
+  <!-- MY KITCHEN TAB -->
+  <div class="tab-content active" id="tabKitchen">
+    <div class="section">
+      <h2 id="kitchenTitle">Mi Cocina</h2>
+      <p id="kitchenMsg">Lista aquí los ingredientes que ya tienes. Serán excluidos de planes, listas y recetas.</p>
+      <textarea id="existingIngredients" rows="5" placeholder="Ej. Harina, Azúcar, Aceite..."></textarea>
+      <br/>
+      <button class="btn-warning" id="saveExistingBtn">Guardar Inventario</button>
+    </div>
+  </div>
+
+  <!-- ALLERGIES TAB -->
+  <div class="tab-content" id="tabAllergies">
+    <div class="section">
+      <h2 id="allergyTitle">Alergias / Restricciones</h2>
+      <p id="allergyMsg">Indica ingredientes que debas evitar.</p>
+      <textarea id="allergyInput" rows="3" placeholder="Ej. Lactosa, Maní, Gluten..."></textarea>
+      <br/>
+      <button class="btn-warning" id="saveAllergyBtn">Guardar Alergias</button>
+    </div>
+  </div>
+
+  <!-- MEAL PLANNER TAB -->
+  <div class="tab-content" id="tabMealPlanner">
+    <div class="section">
+      <h2 id="planTitle">Plan Semanal de Comidas</h2>
+      <p id="planMsg">
+        Indica tus platillos (Lunes a Domingo), nº de personas y calorías diarias.  
+        ChatGPT generará un listado de ingredientes (piezas o gramos),  
+        EXCLUYENDO lo que ya tengas y lo que cause alergias.
+      </p>
+
+      <label class="label" for="numPeople" id="lblNumPeople">Número de personas</label>
+      <input type="number" id="numPeople" min="1" placeholder="Ej. 4"/>
+
+      <label class="label" for="dailyCalories" id="lblDailyCalories">Calorías diarias por persona</label>
+      <input type="number" id="dailyCalories" min="1" placeholder="Ej. 2000"/>
+
+      <div class="section">
+        <label class="label">Lunes</label>
+        <input type="text" id="mealMon" placeholder="Ej. Enchiladas"/>
+        <label class="label">Martes</label>
+        <input type="text" id="mealTue" placeholder="Ej. Pasta Alfredo"/>
+        <label class="label">Miércoles</label>
+        <input type="text" id="mealWed" placeholder="Ej. Sopa de verduras"/>
+        <label class="label">Jueves</label>
+        <input type="text" id="mealThu" placeholder="Ej. Tacos de carne"/>
+        <label class="label">Viernes</label>
+        <input type="text" id="mealFri" placeholder="Ej. Pescado al horno"/>
+        <label class="label">Sábado</label>
+        <input type="text" id="mealSat" placeholder="Ej. Pizza casera"/>
+        <label class="label">Domingo</label>
+        <input type="text" id="mealSun" placeholder="Ej. Pollo rostizado"/>
+      </div>
+
+      <button class="btn-primary" id="generatePlanBtn">Generar Lista de Ingredientes</button>
+      <div class="info-text" id="mealPlanOutput"></div>
+
+      <!-- Botón para agregar ingredientes a la lista -->
+      <button class="btn-success hide" id="addMealPlanToListBtn" style="margin-top:10px;">Agregar a Mi Lista</button>
+    </div>
+  </div>
+
+  <!-- GROCERY LIST TAB -->
+  <div class="tab-content" id="tabGrocery">
+    <div class="section">
+      <h2 id="groceryTitle">Mi Lista de Supermercado</h2>
+      <p id="groceryMsg">Agrega artículos manualmente. Se organizarán por categoría, y las cantidades pueden ser en piezas o en gramos.</p>
+      <label class="label" id="lblItemName" for="manualItemName">Nombre del artículo</label>
+      <input type="text" id="manualItemName" placeholder="Ej. Leche, Huevos..." />
+
+      <label class="label" id="lblItemCategory" for="manualItemCategory">Categoría</label>
+      <select id="manualItemCategory">
+        <option value="">Seleccionar categoría...</option>
+        <option value="Dairy">Dairy</option>
+        <option value="Produce">Produce</option>
+        <option value="Grains">Grains</option>
+        <option value="Meat">Meat</option>
+        <option value="Frozen">Frozen</option>
+        <option value="Miscellaneous">Miscellaneous</option>
+      </select>
+
+      <label class="label" id="lblItemQuantity" for="manualItemQuantity">Cantidad (piezas o gramos)</label>
+      <input type="text" id="manualItemQuantity" placeholder="Ej. 2 piezas, 500 g"/>
+
+      <button class="btn-success" id="addManualItemBtn">Agregar</button>
+    </div>
+
+    <div class="section">
+      <h3 id="grocerySubtitle">Artículos en la Lista</h3>
+      <ul class="item-list" id="itemList"></ul>
+      <button class="btn-danger" id="clearListBtn">Borrar Lista</button>
+    </div>
+  </div>
+
+  <!-- STORE ROUTE TAB -->
+  <div class="tab-content" id="tabRoute">
+    <div class="section">
+      <h2 id="routeTitle">Ruta en la Tienda</h2>
+      <p id="routeMsg">Ingresa el nombre de la tienda. ChatGPT analizará dónde está cada ingrediente y te dará la ruta más rápida.</p>
+      <label class="label" for="storeName" id="lblStoreName">Nombre de la tienda</label>
+      <input type="text" id="storeName" placeholder="Ej. Walmart, Soriana..."/>
+      <button class="btn-primary" id="getRouteBtn">Obtener Ruta</button>
+
+      <div class="info-text" id="routeOutput"></div>
+    </div>
+  </div>
+
+  <!-- RECIPES TAB -->
+  <div class="tab-content" id="tabRecipes">
+    <div class="section">
+      <h2 id="recipesTitle">Recetas (Platillos del Plan)</h2>
+      <p id="recipesMsg">Ver las instrucciones de preparación basadas exactamente en los ingredientes generados (sin inventar otros).</p>
+      <button class="btn-primary" id="getRecipesBtn">Ver Recetas</button>
+      <div class="info-text" id="recipesOutput"></div>
+    </div>
+  </div>
+
+</div> <!-- END .container -->
+
+<script>
+/************************************************
+ * LOCAL STORAGE KEYS
+ ************************************************/
+const STORAGE_KEY_API = 'chatgpt_api_key_o1mini';
+const STORAGE_KEY_GROCERY = 'grocery_items_o1mini';
+const STORAGE_KEY_EXISTING = 'existing_ingredients_o1mini';
+const STORAGE_KEY_ALLERGIES = 'user_allergies_o1mini';
+const STORAGE_KEY_LANG = 'user_language_o1mini'; 
+
+/************************************************
+ * GLOBAL STATE
+ ************************************************/
+let apiKey = '';
+let groceryItems = [];        // {id, name, category, quantity, completed}
+let existingItems = [];       // array de strings
+let allergies = [];           // array de strings
+let currentLanguage = 'es';   // 'es' o 'en'
+
+/************************************************
+ * DOM ELEMENTS
+ ************************************************/
+const container = document.querySelector('.container');
+
+// Language
+const languageSelect = document.getElementById('languageSelect');
+const languageLabel = document.getElementById('languageLabel');
+
+// API Key
+const apiKeySection = document.getElementById('apiKeySection');
+const apiTitleKey = document.getElementById('apiTitleKey');
+const apiKeyMessage = document.getElementById('apiKeyMessage');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+
+// Tab Navigation
+const tabNav = document.getElementById('tabNav');
+const tabButtons = document.querySelectorAll('.tab-nav button');
+const tabs = document.querySelectorAll('.tab-content');
+
+// Kitchen
+const kitchenTitle = document.getElementById('kitchenTitle');
+const kitchenMsg = document.getElementById('kitchenMsg');
+const existingIngredientsEl = document.getElementById('existingIngredients');
+const saveExistingBtn = document.getElementById('saveExistingBtn');
+
+// Allergies
+const allergyTitle = document.getElementById('allergyTitle');
+const allergyMsg = document.getElementById('allergyMsg');
+const allergyInput = document.getElementById('allergyInput');
+const saveAllergyBtn = document.getElementById('saveAllergyBtn');
+
+// Meal Planner
+const planTitle = document.getElementById('planTitle');
+const planMsg = document.getElementById('planMsg');
+const lblNumPeople = document.getElementById('lblNumPeople');
+const lblDailyCalories = document.getElementById('lblDailyCalories');
+const numPeople = document.getElementById('numPeople');
+const dailyCalories = document.getElementById('dailyCalories');
+const mealMon = document.getElementById('mealMon');
+const mealTue = document.getElementById('mealTue');
+const mealWed = document.getElementById('mealWed');
+const mealThu = document.getElementById('mealThu');
+const mealFri = document.getElementById('mealFri');
+const mealSat = document.getElementById('mealSat');
+const mealSun = document.getElementById('mealSun');
+const generatePlanBtn = document.getElementById('generatePlanBtn');
+const mealPlanOutput = document.getElementById('mealPlanOutput');
+const addMealPlanToListBtn = document.getElementById('addMealPlanToListBtn');
+
+// Grocery
+const groceryTitle = document.getElementById('groceryTitle');
+const groceryMsg = document.getElementById('groceryMsg');
+const lblItemName = document.getElementById('lblItemName');
+const lblItemCategory = document.getElementById('lblItemCategory');
+const lblItemQuantity = document.getElementById('lblItemQuantity');
+const manualItemName = document.getElementById('manualItemName');
+const manualItemCategory = document.getElementById('manualItemCategory');
+const manualItemQuantity = document.getElementById('manualItemQuantity');
+const addManualItemBtn = document.getElementById('addManualItemBtn');
+const itemList = document.getElementById('itemList');
+const clearListBtn = document.getElementById('clearListBtn');
+const grocerySubtitle = document.getElementById('grocerySubtitle');
+
+// Store Route
+const routeTitle = document.getElementById('routeTitle');
+const routeMsg = document.getElementById('routeMsg');
+const lblStoreName = document.getElementById('lblStoreName');
+const storeNameInput = document.getElementById('storeName');
+const getRouteBtn = document.getElementById('getRouteBtn');
+const routeOutput = document.getElementById('routeOutput');
+
+// Recipes
+const recipesTitle = document.getElementById('recipesTitle');
+const recipesMsg = document.getElementById('recipesMsg');
+const getRecipesBtn = document.getElementById('getRecipesBtn');
+const recipesOutput = document.getElementById('recipesOutput');
+
+/************************************************
+ * PAGE LOAD: INIT
+ ************************************************/
+window.addEventListener('DOMContentLoaded', () => {
+  // Load from localStorage
+  apiKey = localStorage.getItem(STORAGE_KEY_API) || '';
+  groceryItems = JSON.parse(localStorage.getItem(STORAGE_KEY_GROCERY)) || [];
+  existingItems = JSON.parse(localStorage.getItem(STORAGE_KEY_EXISTING)) || [];
+  allergies = JSON.parse(localStorage.getItem(STORAGE_KEY_ALLERGIES)) || [];
+  currentLanguage = localStorage.getItem(STORAGE_KEY_LANG) || 'es';
+
+  // Set language in select
+  languageSelect.value = currentLanguage;
+  applyLanguage(currentLanguage);
+
+  if (!apiKey) {
+    apiKeySection.classList.remove('hide');
+  } else {
+    tabNav.classList.remove('hide');
+    renderGroceryItems();
+  }
+});
+
+/************************************************
+ * LANGUAGE TOGGLE
+ ************************************************/
+languageSelect.addEventListener('change', (e) => {
+  currentLanguage = e.target.value;
+  localStorage.setItem(STORAGE_KEY_LANG, currentLanguage);
+  applyLanguage(currentLanguage);
+});
+
+function applyLanguage(lang) {
+  if(lang === 'en') {
+    document.documentElement.lang = 'en';
+    document.title = 'Grocery App';
+    // Header
+    document.getElementById('appTitle').textContent = 'Grocery App';
+    // Language Label
+    languageLabel.textContent = 'Language:';
+    // API Key Section
+    apiTitleKey.textContent = 'Setup API Key';
+    apiKeyMessage.textContent = 'Enter your OpenAI key (it will be stored locally).';
+    saveApiKeyBtn.textContent = 'Save';
+    // Tabs
+    tabButtons[0].textContent = 'My Kitchen';
+    tabButtons[1].textContent = 'Allergies';
+    tabButtons[2].textContent = 'Meal Plan';
+    tabButtons[3].textContent = 'Grocery List';
+    tabButtons[4].textContent = 'Store Route';
+    tabButtons[5].textContent = 'Recipes';
+    // Kitchen
+    kitchenTitle.textContent = 'My Kitchen';
+    kitchenMsg.textContent = 'List the ingredients you already have at home. They will be excluded in your plans, grocery list and recipes.';
+    saveExistingBtn.textContent = 'Save Inventory';
+    // Allergies
+    allergyTitle.textContent = 'Allergies / Restrictions';
+    allergyMsg.textContent = 'List any ingredients you need to avoid.';
+    saveAllergyBtn.textContent = 'Save Allergies';
+    // Meal Planner
+    planTitle.textContent = 'Weekly Meal Plan';
+    planMsg.textContent = 'Enter your dishes (Mon-Sun), number of people and daily calories. ChatGPT will generate a list of ingredients (pieces or grams), excluding items you already have or that cause allergies.';
+    lblNumPeople.textContent = 'Number of People';
+    lblDailyCalories.textContent = 'Daily Calories (per person)';
+    generatePlanBtn.textContent = 'Generate Ingredients';
+    addMealPlanToListBtn.textContent = 'Add to Grocery List';
+    // Grocery
+    groceryTitle.textContent = 'Grocery List';
+    groceryMsg.textContent = 'Manually add items. They will be organized by category; quantity can be in pieces or grams.';
+    lblItemName.textContent = 'Item Name';
+    lblItemCategory.textContent = 'Category';
+    lblItemQuantity.textContent = 'Quantity (pieces or grams)';
+    addManualItemBtn.textContent = 'Add Item';
+    grocerySubtitle.textContent = 'Items in the List';
+    clearListBtn.textContent = 'Clear List';
+    // Route
+    routeTitle.textContent = 'Store Route';
+    routeMsg.textContent = 'Enter the store name. ChatGPT will consider the layout of the store for each ingredient and give you the fastest route.';
+    lblStoreName.textContent = 'Store Name';
+    getRouteBtn.textContent = 'Get Route';
+    // Recipes
+    recipesTitle.textContent = 'Recipes (Planned Dishes)';
+    recipesMsg.textContent = 'View preparation instructions based exactly on the required ingredients (without adding others).';
+    getRecipesBtn.textContent = 'View Recipes';
+  } else {
+    document.documentElement.lang = 'es';
+    document.title = 'Grocery App';
+    // Header
+    document.getElementById('appTitle').textContent = 'Grocery App';
+    // Language Label
+    languageLabel.textContent = 'Idioma:';
+    // API Key Section
+    apiTitleKey.textContent = 'Configurar API Key';
+    apiKeyMessage.textContent = 'Ingresa tu clave de OpenAI (se guardará localmente).';
+    saveApiKeyBtn.textContent = 'Guardar';
+    // Tabs
+    tabButtons[0].textContent = 'En Casa';
+    tabButtons[1].textContent = 'Alergias';
+    tabButtons[2].textContent = 'Plan Semanal';
+    tabButtons[3].textContent = 'Mi Lista';
+    tabButtons[4].textContent = 'Ruta Tienda';
+    tabButtons[5].textContent = 'Recetas';
+    // Kitchen
+    kitchenTitle.textContent = 'Mi Cocina';
+    kitchenMsg.textContent = 'Lista aquí los ingredientes que ya tienes en casa. Se excluirán de planes, lista y recetas.';
+    saveExistingBtn.textContent = 'Guardar Inventario';
+    // Allergies
+    allergyTitle.textContent = 'Alergias / Restricciones';
+    allergyMsg.textContent = 'Indica ingredientes que debas evitar.';
+    saveAllergyBtn.textContent = 'Guardar Alergias';
+    // Meal Planner
+    planTitle.textContent = 'Plan Semanal de Comidas';
+    planMsg.textContent = 'Indica tus platillos (Lun-Dom), número de personas y calorías diarias. ChatGPT generará ingredientes (piezas o gramos), excluyendo lo que ya tengas y alérgenos.';
+    lblNumPeople.textContent = 'Número de personas';
+    lblDailyCalories.textContent = 'Calorías diarias (por persona)';
+    generatePlanBtn.textContent = 'Generar Lista de Ingredientes';
+    addMealPlanToListBtn.textContent = 'Agregar a Mi Lista';
+    // Grocery
+    groceryTitle.textContent = 'Mi Lista de Supermercado';
+    groceryMsg.textContent = 'Agrega artículos manualmente. Se organizan por categoría; la cantidad puede ser en piezas o gramos.';
+    lblItemName.textContent = 'Nombre del artículo';
+    lblItemCategory.textContent = 'Categoría';
+    lblItemQuantity.textContent = 'Cantidad (piezas o gramos)';
+    addManualItemBtn.textContent = 'Agregar';
+    grocerySubtitle.textContent = 'Artículos en la Lista';
+    clearListBtn.textContent = 'Borrar Lista';
+    // Route
+    routeTitle.textContent = 'Ruta en la Tienda';
+    routeMsg.textContent = 'Ingresa el nombre de la tienda. ChatGPT analizará cómo está distribuida la tienda y dónde se ubica cada ingrediente para dar la ruta más rápida.';
+    lblStoreName.textContent = 'Nombre de la tienda';
+    getRouteBtn.textContent = 'Obtener Ruta';
+    // Recipes
+    recipesTitle.textContent = 'Recetas (Platillos del Plan)';
+    recipesMsg.textContent = 'Obtén instrucciones de preparación basadas exactamente en los ingredientes requeridos (sin añadir otros).';
+    getRecipesBtn.textContent = 'Ver Recetas';
+  }
+}
+
+/************************************************
+ * TAB NAVIGATION
+ ************************************************/
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabButtons.forEach(b => b.classList.remove('active'));
+    tabs.forEach(tab => tab.classList.remove('active'));
+
+    btn.classList.add('active');
+    const target = btn.getAttribute('data-tab');
+    document.getElementById(target).classList.add('active');
+  });
+});
+
+/************************************************
+ * API KEY
+ ************************************************/
+saveApiKeyBtn.addEventListener('click', () => {
+  const key = apiKeyInput.value.trim();
+  if(!key) {
+    alert(currentLanguage === 'en' 
+      ? 'Please enter a valid API Key.'
+      : 'Por favor ingresa una API Key válida.'
+    );
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY_API, key);
+  apiKey = key;
+  apiKeySection.classList.add('hide');
+  tabNav.classList.remove('hide');
+  renderGroceryItems();
+});
+
+/************************************************
+ * MY KITCHEN (EXISTING ITEMS)
+ ************************************************/
+saveExistingBtn.addEventListener('click', () => {
+  const text = existingIngredientsEl.value.trim();
+  existingItems = text.split(/[\n,]/).map(i => i.trim()).filter(Boolean);
+  localStorage.setItem(STORAGE_KEY_EXISTING, JSON.stringify(existingItems));
+  alert(currentLanguage === 'en' 
+    ? 'Kitchen inventory saved.'
+    : 'Inventario de cocina guardado.'
+  );
+});
+
+/************************************************
+ * ALLERGIES
+ ************************************************/
+saveAllergyBtn.addEventListener('click', () => {
+  const text = allergyInput.value.trim();
+  allergies = text.split(/[\n,]/).map(i => i.trim()).filter(Boolean);
+  localStorage.setItem(STORAGE_KEY_ALLERGIES, JSON.stringify(allergies));
+  alert(currentLanguage === 'en'
+    ? 'Allergies saved.'
+    : 'Alergias guardadas.'
+  );
+});
+
+/************************************************
+ * GROCERY LIST
+ ************************************************/
+function renderGroceryItems() {
+  itemList.innerHTML = '';
+  if(groceryItems.length === 0) {
+    itemList.innerHTML = (currentLanguage === 'en')
+      ? '<p>No items in your list.</p>'
+      : '<p>No hay artículos en tu lista.</p>';
+    return;
+  }
+  const categories = ["Dairy","Produce","Grains","Meat","Frozen","Miscellaneous"];
+  categories.forEach(cat => {
+    const catItems = groceryItems.filter(i => i.category === cat);
+    if(catItems.length > 0) {
+      const catHeader = document.createElement('h4');
+      catHeader.textContent = cat;
+      itemList.appendChild(catHeader);
+
+      catItems.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'item';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = `${item.name} (x${item.quantity})`;
+        if(item.completed) nameSpan.classList.add('completed');
+
+        const btnToggle = document.createElement('button');
+        btnToggle.textContent = item.completed ? '✅' : '✔️';
+        btnToggle.addEventListener('click', () => toggleItem(item.id));
+
+        const btnDelete = document.createElement('button');
+        btnDelete.textContent = '🗑️';
+        btnDelete.addEventListener('click', () => deleteItem(item.id));
+
+        li.appendChild(nameSpan);
+        li.appendChild(btnToggle);
+        li.appendChild(btnDelete);
+        itemList.appendChild(li);
+      });
+    }
+  });
+}
+
+// Add Manual
+addManualItemBtn.addEventListener('click', () => {
+  const name = manualItemName.value.trim();
+  let category = manualItemCategory.value;
+  const quantity = manualItemQuantity.value.trim();
+
+  if(!name) {
+    alert(currentLanguage === 'en'
+      ? 'Please enter the item name.'
+      : 'Por favor, ingresa el nombre del artículo.'
+    );
+    return;
+  }
+  if(!category) category = 'Miscellaneous';
+  if(!quantity) {
+    alert(currentLanguage === 'en'
+      ? 'Please enter the quantity (pieces or grams).'
+      : 'Por favor, ingresa la cantidad (piezas o gramos).'
+    );
+    return;
+  }
+
+  const newItem = {
+    id: Date.now(),
+    name,
+    category,
+    quantity, // e.g. "2 pieces" or "500 g"
+    completed: false
+  };
+  groceryItems.push(newItem);
+  saveGroceryItems();
+  renderGroceryItems();
+
+  manualItemName.value = '';
+  manualItemCategory.value = '';
+  manualItemQuantity.value = '';
+});
+
+function toggleItem(id) {
+  groceryItems = groceryItems.map(it => {
+    if(it.id === id) {
+      return {...it, completed: !it.completed};
+    }
+    return it;
+  });
+  saveGroceryItems();
+  renderGroceryItems();
+}
+function deleteItem(id) {
+  groceryItems = groceryItems.filter(it => it.id !== id);
+  saveGroceryItems();
+  renderGroceryItems();
+}
+clearListBtn.addEventListener('click', () => {
+  if(confirm(currentLanguage === 'en'
+    ? 'Are you sure you want to clear the list?'
+    : '¿Seguro que deseas borrar toda la lista?'
+  )){
+    groceryItems = [];
+    saveGroceryItems();
+    renderGroceryItems();
+  }
+});
+function saveGroceryItems() {
+  localStorage.setItem(STORAGE_KEY_GROCERY, JSON.stringify(groceryItems));
+}
+
+/************************************************
+ * MEAL PLANNER
+ ************************************************/
+generatePlanBtn.addEventListener('click', async () => {
+  mealPlanOutput.textContent = (currentLanguage === 'en')
+    ? 'Generating ingredient list...'
+    : 'Generando lista de ingredientes...';
+  addMealPlanToListBtn.classList.add('hide');
+
+  const people = parseInt(numPeople.value.trim(), 10) || 1;
+  const calories = parseInt(dailyCalories.value.trim(), 10) || 2000;
+
+  const meals = {
+    Monday: mealMon.value.trim(),
+    Tuesday: mealTue.value.trim(),
+    Wednesday: mealWed.value.trim(),
+    Thursday: mealThu.value.trim(),
+    Friday: mealFri.value.trim(),
+    Saturday: mealSat.value.trim(),
+    Sunday: mealSun.value.trim()
+  };
+
+  // Determinar si se ingresó algo
+  const hasMeals = Object.values(meals).some(v => v);
+  if(!hasMeals) {
+    mealPlanOutput.textContent = (currentLanguage === 'en')
+      ? 'No meals entered.'
+      : 'No has ingresado ningún platillo.';
+    return;
+  }
+
+  // Generar texto de platillos según idioma
+  let mealText = '';
+  for(const [day, dish] of Object.entries(meals)) {
+    if(dish) {
+      mealText += `${day}: ${dish}\n`;
+    }
+  }
+
+  // Prompt
+  const promptEs = `
+Eres un asistente experto en planeación de comidas. 
+NO inventes platillos para días en blanco.
+El usuario indica platillos solo para estos días:
+${mealText}
+
+Datos:
+- Personas: ${people}
+- Calorías diarias: ${calories}
+- Tiene ya en casa: ${existingItems.join(', ') || '(ninguno)'}
+- Alérgico a: ${allergies.join(', ') || '(ninguno)'}
+Genera una lista de ingredientes totales, organizados en 
+[Dairy, Produce, Grains, Meat, Frozen, Miscellaneous],
+pero cada uno con "name", "quantity" (con piezas o gramos) y sin incluir los que ya tiene o son alérgenos.
+Por favor, NO muestres JSON al usuario, da un texto legible describiendo los ingredientes y cantidades. 
+Sin embargo, incluye internamente un bloque JSON (sin que se vea) para que la app lo pueda parsear:
+Comienza con "HUMAN_READABLE:" y luego lista en texto los ingredientes.
+Después en una nueva línea "JSON_BLOCK:" y pega el JSON completo. 
+Luego "EXPLANATION:" con una breve explicación. 
+`.trim();
+
+  const promptEn = `
+You are an expert meal-planning assistant.
+Do NOT create dishes for blank days.
+User only provided meals for:
+${mealText}
+
+Details:
+- People: ${people}
+- Daily calories: ${calories}
+- Already has: ${existingItems.join(', ') || '(none)'}
+- Allergic to: ${allergies.join(', ') || '(none)'}
+Generate a total ingredient list, grouped in 
+[Dairy, Produce, Grains, Meat, Frozen, Miscellaneous],
+each with "name", "quantity" (pieces or grams), excluding what the user already has or is allergic to.
+Please do NOT show raw JSON to the user; produce a human-readable text describing the ingredients and their amounts.
+However, embed a JSON block so the app can parse it:
+Start with "HUMAN_READABLE:" then the textual list,
+then on a new line "JSON_BLOCK:" with the full JSON,
+then on a new line "EXPLANATION:" with a short explanation.
+`.trim();
+
+  const finalPrompt = (currentLanguage === 'en') ? promptEn : promptEs;
+
+  try {
+    const response = await callChatGPT(finalPrompt);
+    mealPlanOutput.textContent = ''; // Limpia para poner formato
+
+    // Buscamos "HUMAN_READABLE:" y "JSON_BLOCK:" y "EXPLANATION:"
+    const humanReadableMatch = response.match(/HUMAN_READABLE:\s*([\s\S]*?)\s*JSON_BLOCK:/);
+    const jsonBlockMatch = response.match(/JSON_BLOCK:\s*([\s\S]*?)\s*EXPLANATION:/);
+    const explanationMatch = response.match(/EXPLANATION:\s*([\s\S]*)$/);
+
+    let humanText = '';
+    let jsonText = '';
+    let explanationText = '';
+
+    if(humanReadableMatch) {
+      humanText = humanReadableMatch[1].trim();
+    }
+    if(jsonBlockMatch) {
+      jsonText = jsonBlockMatch[1].trim();
+    }
+    if(explanationMatch) {
+      explanationText = explanationMatch[1].trim();
+    }
+
+    // Muestra al usuario el texto humano + explicación (sin JSON)
+    mealPlanOutput.textContent = 
+      humanText + '\n\n' + 
+      (currentLanguage === 'en' ? 'Explanation: ' : 'Explicación: ') + explanationText;
+
+    // Guardamos la respuesta completa para usarla al agregar a la lista
+    window.lastPlanResponse = response;
+
+    // Verificamos parseo del JSON
+    if(jsonText) {
+      try {
+        const planJson = JSON.parse(jsonText);
+        // Solo si parsea, mostramos botón
+        addMealPlanToListBtn.classList.remove('hide');
+      } catch(e) {
+        mealPlanOutput.textContent += '\n\n' + (currentLanguage === 'en'
+          ? 'Error parsing the JSON block.'
+          : 'Error al parsear el bloque JSON.'
+        );
+        console.error('Error al parsear JSON:', e);
+      }
+    } else {
+      mealPlanOutput.textContent += '\n\n' + (currentLanguage === 'en'
+        ? 'No JSON block found.'
+        : 'No se encontró bloque JSON.'
+      );
+    }
+
+  } catch(err) {
+    console.error(err);
+    mealPlanOutput.textContent = (currentLanguage === 'en')
+      ? 'Error generating ingredient list with ChatGPT.'
+      : 'Error al generar lista de ingredientes con ChatGPT.';
+  }
+});
+
+// Add meal plan to grocery
+addMealPlanToListBtn.addEventListener('click', () => {
+  const responseText = window.lastPlanResponse || '';
+  const jsonBlockMatch = responseText.match(/JSON_BLOCK:\s*([\s\S]*?)\s*EXPLANATION:/);
+  if(!jsonBlockMatch) {
+    alert(currentLanguage === 'en'
+      ? 'No JSON block found in the last response.'
+      : 'No se encontró bloque JSON en la respuesta previa.'
+    );
+    return;
+  }
+  const jsonText = jsonBlockMatch[1].trim();
+  try {
+    const planJson = JSON.parse(jsonText);
+    // Insertar en grocery
+    Object.entries(planJson).forEach(([cat, arr]) => {
+      arr.forEach(ing => {
+        if(ing.name) {
+          // ing.quantity => "2 pieces" or "300 g"
+          groceryItems.push({
+            id: Date.now() + Math.random(),
+            name: ing.name,
+            category: cat || 'Miscellaneous',
+            quantity: ing.quantity || '1',
+            completed: false
+          });
+        }
+      });
+    });
+    saveGroceryItems();
+    renderGroceryItems();
+    alert(currentLanguage === 'en'
+      ? 'Ingredients added to the grocery list.'
+      : 'Ingredientes agregados a tu lista.'
+    );
+  } catch(e) {
+    alert(currentLanguage === 'en'
+      ? 'Error parsing the JSON block.'
+      : 'Error al parsear el bloque JSON.'
+    );
+    console.error('Error al parsear JSON:', e);
+  }
+});
+
+/************************************************
+ * STORE ROUTE
+ ************************************************/
+getRouteBtn.addEventListener('click', async() => {
+  routeOutput.textContent = '';
+  const storeName = storeNameInput.value.trim();
+  if(!storeName) {
+    alert(currentLanguage === 'en'
+      ? 'Please enter the store name.'
+      : 'Por favor ingresa el nombre de la tienda.'
+    );
+    return;
+  }
+  if(groceryItems.length === 0) {
+    routeOutput.textContent = (currentLanguage === 'en')
+      ? 'Your list is empty. Add items first.'
+      : 'Tu lista está vacía. Agrega artículos primero.';
+    return;
+  }
+
+  // Summarize items ignoring categories for route. 
+  // Because we want ChatGPT to base it on the store's layout, not our categories.
+  const itemsText = groceryItems.map(i => `${i.name} (quantity: ${i.quantity})`).join(', ');
+
+  const promptEs = `
+El usuario tiene esta lista de artículos:
+${itemsText}
+
+Tienda: ${storeName}.
+Por favor analiza cómo podría estar organizada la tienda (pasillos, secciones, etc.) 
+y da la ruta más rápida, indicando dónde se ubica cada ingrediente. 
+No uses la clasificación interna (Dairy, Produce...), 
+sino la idea de "en qué sección/pasillo" de la tienda se encuentra cada ingrediente. 
+`.trim();
+
+  const promptEn = `
+User has these items:
+${itemsText}
+
+Store: ${storeName}.
+Please analyze how the store might be organized (aisles, sections, etc.) 
+and give the fastest route, indicating where each ingredient is located. 
+Do NOT rely on internal categories like Dairy or Produce. 
+Instead, consider the store layout and which aisle/section each item is found in.
+`.trim();
+
+  const finalPrompt = (currentLanguage === 'en') ? promptEn : promptEs;
+
+  try {
+    const response = await callChatGPT(finalPrompt);
+    routeOutput.textContent = response;
+  } catch(err) {
+    console.error(err);
+    routeOutput.textContent = (currentLanguage === 'en'
+      ? 'Error obtaining the store route from ChatGPT.'
+      : 'Error al obtener la ruta de ChatGPT.'
+    );
+  }
+});
+
+/************************************************
+ * RECIPES
+ ************************************************/
+getRecipesBtn.addEventListener('click', async() => {
+  recipesOutput.textContent = (currentLanguage === 'en')
+    ? 'Obtaining recipes...'
+    : 'Obteniendo recetas...';
+
+  // Tomamos plan de la interfaz
+  const meals = {
+    Monday: mealMon.value.trim(),
+    Tuesday: mealTue.value.trim(),
+    Wednesday: mealWed.value.trim(),
+    Thursday: mealThu.value.trim(),
+    Friday: mealFri.value.trim(),
+    Saturday: mealSat.value.trim(),
+    Sunday: mealSun.value.trim()
+  };
+  const hasMeals = Object.values(meals).some(v => v);
+  if(!hasMeals) {
+    recipesOutput.textContent = (currentLanguage === 'en')
+      ? 'No meals entered in the plan.'
+      : 'No se ingresaron platillos en el plan.';
+    return;
+  }
+  // Filtramos días que tengan platillos
+  let mealText = '';
+  for(const [day, dish] of Object.entries(meals)) {
+    if(dish) mealText += `${day}: ${dish}\n`;
+  }
+  // Recolectar ingredientes de groceryItems que provengan de ChatGPT. 
+  // (En una app real, necesitaríamos marcar cuáles provienen del plan. Aquí simplificamos y asume que la lista final es la que se usa.)
+  const finalItems = groceryItems.map(i => i.name + ' (' + i.quantity + ')').join(', ');
+
+  const promptEs = `
+El usuario planeó estos platillos:
+${mealText}
+
+Ya tiene estos ingredientes: ${existingItems.join(', ') || '(ninguno)'}
+Alérgico a: ${allergies.join(', ') || '(ninguno)'}
+
+La lista final de ingredientes necesarios (sin los que ya tiene) es:
+${finalItems}
+
+Por favor da recetas concretas para cada platillo, 
+usando EXACTAMENTE esos ingredientes. 
+No agregues nuevos ingredientes ni sustituyas. 
+Da instrucciones de preparación paso a paso.
+`.trim();
+
+  const promptEn = `
+User planned these dishes:
+${mealText}
+
+User already has: ${existingItems.join(', ') || '(none)'}
+Allergic to: ${allergies.join(', ') || '(none)'}
+
+The final needed ingredients (excluding those at home) are:
+${finalItems}
+
+Please provide concise recipes for each dish, 
+using EXACTLY these ingredients. 
+Do not add new ingredients. 
+Provide step-by-step preparation instructions.
+`.trim();
+
+  const finalPrompt = (currentLanguage === 'en') ? promptEn : promptEs;
+
+  try {
+    const response = await callChatGPT(finalPrompt);
+    recipesOutput.textContent = response;
+  } catch(err) {
+    console.error(err);
+    recipesOutput.textContent = (currentLanguage === 'en')
+      ? 'Error obtaining recipes from ChatGPT.'
+      : 'Error al obtener las recetas.';
+  }
+});
+
+/************************************************
+ * CALL CHATGPT
+ ************************************************/
+async function callChatGPT(userPrompt) {
+  if(!apiKey) {
+    throw new Error('No API key defined.');
+  }
+  const url = 'https://api.openai.com/v1/chat/completions';
+  // Usa un modelo válido como "gpt-3.5-turbo" o "gpt-4"
+  const payload = {
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "system", // Rol corregido de "user" a "system"
+        content: (currentLanguage === 'en')
+          ? "You are an expert assistant for meal planning, grocery lists, and store routes, always respecting the user's existing items and allergies."
+          : "Eres un asistente experto en planeación de comidas, listas de supermercado y rutas de tienda, siempre respetando ingredientes existentes y alergias del usuario."
+      },
+      {
+        role: "user",
+        content: userPrompt
+      }
+    ],
+    temperature: 0.7
+  };
+
+  // Agregar logs para depuración
+  console.log("=== Payload enviado a OpenAI ===");
+  console.log(JSON.stringify(payload, null, 2));
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const rawData = await resp.text();
+  console.log("=== Respuesta cruda ChatGPT ===");
+  console.log(rawData);
+
+  if(!resp.ok) {
+    throw new Error(`HTTP error! status: ${resp.status}\nResp: ${rawData}`);
+  }
+  const data = JSON.parse(rawData);
+  // Guardamos la última respuesta completa para uso posterior
+  window.lastPlanResponse = data.choices[0].message.content;
+  return data.choices[0].message.content;
+}
+</script>
+</body>
+</html>

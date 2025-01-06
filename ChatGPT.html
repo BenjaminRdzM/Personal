@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Super ChatGPT Multimodal - Todos los Modelos</title>
+  <style>
+    /* ================== Estilos base/reset ================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: sans-serif;
+    }
+    html, body {
+      height: 100%;
+      background-color: #f0f2f5;
+    }
+    body {
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+    }
+
+    /* ================== Sidebar lateral ================== */
+    .sidebar {
+      width: 320px;
+      background-color: #ffffff;
+      border-right: 1px solid #ddd;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .sidebar h2 {
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+    input, select {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .error {
+      color: red;
+      font-style: italic;
+      margin-top: 5px;
+    }
+    .model-description {
+      font-size: 0.9em;
+      color: #666;
+      font-style: italic;
+      margin: 5px 0 15px 0;
+      white-space: pre-wrap;
+    }
+    .token-estimates, .cost-container {
+      background-color: #fafafa;
+      border: 1px solid #eee;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .token-estimates h4,
+    .cost-container h4 {
+      margin-bottom: 10px;
+    }
+    .cost-line {
+      font-size: 0.9em;
+      margin-bottom: 3px;
+    }
+    .token-estimates input[type="number"] {
+      width: 100px;
+      margin-right: 5px;
+    }
+
+    /* ================== Zona principal (chat) ================== */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      background-color: #202123;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background-color: #e9ebee;
+    }
+    .chat-message {
+      margin-bottom: 20px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+    .chat-message.user .author {
+      color: #007bff;
+      font-weight: bold;
+    }
+    .chat-message.assistant .author {
+      color: #28a745;
+      font-weight: bold;
+    }
+    .chat-message.system .author {
+      color: #6c757d;
+      font-weight: bold;
+    }
+    .author {
+      margin-bottom: 4px;
+    }
+    .content {
+      padding: 8px 12px;
+      background: #fff;
+      border-radius: 8px;
+    }
+
+    /* ================== Input fijo abajo ================== */
+    .chat-input-container {
+      background-color: #f7f7f7;
+      border-top: 1px solid #ccc;
+      padding: 10px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
+    .chat-input {
+      flex: 1;
+      resize: none;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-right: 10px;
+      font-size: 1em;
+    }
+    .send-button {
+      background-color: #007bff;
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    .send-button:hover {
+      background-color: #0056b3;
+    }
+
+    /* ================== Botón subir archivos ================== */
+    .file-upload-container {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      margin-right: 10px;
+    }
+    .file-upload-btn {
+      background-color: #28a745;
+      color: #fff;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .file-upload-input {
+      position: absolute;
+      font-size: 100px;
+      opacity: 0;
+      right: 0;
+      top: 0;
+      cursor: pointer;
+    }
+    .file-upload-btn:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>Configuración</h2>
+    <!-- API Key -->
+    <div class="api-key-container">
+      <label for="apiKey">API Key:</label>
+      <input type="password" id="apiKey" placeholder="sk-..." />
+      <div id="apiKeyError" class="error" style="display:none;"></div>
+    </div>
+
+    <!-- Selección de modelo -->
+    <div>
+      <label for="modelSelect">Selecciona el modelo:</label>
+      <select id="modelSelect"></select>
+      <div id="modelDesc" class="model-description"></div>
+    </div>
+
+    <!-- Estimación manual de tokens -->
+    <div class="token-estimates">
+      <h4>Estimación de tokens</h4>
+      <div style="margin-bottom:8px;">
+        <label for="inputTokens">Tokens de entrada:</label>
+        <input type="number" id="inputTokens" min="0" value="0" />
+      </div>
+      <div style="margin-bottom:8px;">
+        <label for="outputTokens">Tokens de salida:</label>
+        <input type="number" id="outputTokens" min="0" value="0" />
+      </div>
+      <div style="margin-bottom:8px;">
+        <label for="reasoningTokens">Tokens de razonamiento:</label>
+        <input type="number" id="reasoningTokens" min="0" value="0" />
+      </div>
+    </div>
+
+    <!-- Contenedor de costos -->
+    <div class="cost-container">
+      <h4>Costo estimado (MXN)</h4>
+      <div class="cost-line">
+        Total: $<span id="estTotalCost">0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZONA PRINCIPAL (CHAT) -->
+  <div class="main">
+    <div class="header">
+      <h1>Super ChatGPT Multimodal - Todos los Modelos</h1>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+      <!-- Mensajes -->
+    </div>
+
+    <div class="chat-input-container">
+      <!-- Botón para subir archivos -->
+      <div class="file-upload-container">
+        <button class="file-upload-btn">Adjuntar</button>
+        <input type="file" class="file-upload-input" id="fileInput" multiple />
+      </div>
+      <!-- Campo de texto -->
+      <textarea class="chat-input" id="promptInput" rows="1" placeholder="Escribe tu mensaje..."></textarea>
+      <!-- Botón enviar -->
+      <button class="send-button" id="sendButton">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    /********************************************************************
+     * 1) Constantes de conversión y factor de tokens
+     ********************************************************************/
+    const USD_TO_MXN = 21;
+
+    /********************************************************************
+     * 2) Listado enorme de modelos + descripción (endpoint, precios, etc.)
+     *    Cada modelo se manejará como un item distinto en el <select>
+     ********************************************************************/
+    const MODELS = {
+      // ====================== GPT-4o ======================
+      "gpt-4o(regular)": {
+        name: "gpt-4o (regular)",
+        desc: `GPT-4o: 
+- 2.50 USD / 1M tokens (entrada), 10.00 USD / 1M tokens (salida).
+- Versión normal, sin batch/cached.`,
+        inputUSD: 2.50,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+      "gpt-4o(batch)": {
+        name: "gpt-4o (Batch)",
+        desc: `GPT-4o con Batch API:
+- 1.25 USD / 1M tokens (entrada), 5.00 USD / 1M tokens (salida).
+- Respuestas en 24h con 50% descuento.`,
+        inputUSD: 1.25,
+        outputUSD: 5.00,
+        endpoint: "chat"
+      },
+      "gpt-4o(cached)": {
+        name: "gpt-4o (Cached)",
+        desc: `GPT-4o con prompts cacheados:
+- 1.25 USD / 1M tokens (entrada cached),
+- 10.00 USD / 1M tokens (salida).`,
+        inputUSD: 1.25,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+
+      // Versión 2024-11-20
+      "gpt-4o-2024-11-20(regular)": {
+        name: "gpt-4o-2024-11-20 (regular)",
+        desc: `GPT-4o 2024-11-20:
+- 2.50 USD / 1M in, 10.00 USD / 1M out`,
+        inputUSD: 2.50,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-2024-11-20(batch)": {
+        name: "gpt-4o-2024-11-20 (Batch)",
+        desc: `Con Batch: 1.25 in, 5.00 out x 1M tokens`,
+        inputUSD: 1.25,
+        outputUSD: 5.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-2024-11-20(cached)": {
+        name: "gpt-4o-2024-11-20 (Cached)",
+        desc: `Con prompts cacheados: 1.25 in, 10.00 out`,
+        inputUSD: 1.25,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+
+      // Versión 2024-08-06
+      "gpt-4o-2024-08-06(regular)": {
+        name: "gpt-4o-2024-08-06 (regular)",
+        desc: `2.50 in, 10.00 out x 1M tokens`,
+        inputUSD: 2.50,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-2024-08-06(batch)": {
+        name: "gpt-4o-2024-08-06 (Batch)",
+        desc: `1.25 in, 5.00 out x 1M tokens`,
+        inputUSD: 1.25,
+        outputUSD: 5.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-2024-08-06(cached)": {
+        name: "gpt-4o-2024-08-06 (Cached)",
+        desc: `1.25 in (cached), 10.00 out`,
+        inputUSD: 1.25,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+
+      // GPT-4o Audio Preview
+      "gpt-4o-audio-preview(text)": {
+        name: "gpt-4o-audio-preview (Text)",
+        desc: `Texto:
+- 2.50 in / 10.00 out.
+Audio:
+- 100 in / 200 out. (aquí sólo Modo Texto)`,
+        inputUSD: 2.50,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-audio-preview(audio)": {
+        name: "gpt-4o-audio-preview (Audio)",
+        desc: `Modo Audio:
+- 100.00 USD / 1M in
+- 200.00 USD / 1M out`,
+        inputUSD: 100.00,
+        outputUSD: 200.00,
+        endpoint: "audio"
+      },
+
+      "gpt-4o-audio-preview-2024-12-17(text)": {
+        name: "gpt-4o-audio-preview-2024-12-17 (Text)",
+        desc: `Texto:
+- 2.50 in, 10.00 out
+Audio:
+- 40 / 80 (versión 2024-12-17)`,
+        inputUSD: 2.50,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-audio-preview-2024-12-17(audio)": {
+        name: "gpt-4o-audio-preview-2024-12-17 (Audio)",
+        desc: `Audio:
+- 40.00 in, 80.00 out`,
+        inputUSD: 40.00,
+        outputUSD: 80.00,
+        endpoint: "audio"
+      },
+
+      "gpt-4o-audio-preview-2024-10-01(text)": {
+        name: "gpt-4o-audio-preview-2024-10-01 (Text)",
+        desc: `Texto:
+2.50 in, 10.00 out
+Audio:
+100 / 200`,
+        inputUSD: 2.50,
+        outputUSD: 10.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-audio-preview-2024-10-01(audio)": {
+        name: "gpt-4o-audio-preview-2024-10-01 (Audio)",
+        desc: `Audio:
+100 in, 200 out`,
+        inputUSD: 100.00,
+        outputUSD: 200.00,
+        endpoint: "audio"
+      },
+
+      "gpt-4o-2024-05-13(regular)": {
+        name: "gpt-4o-2024-05-13 (regular)",
+        desc: `5.00 in / 15.00 out x 1M tokens`,
+        inputUSD: 5.00,
+        outputUSD: 15.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-2024-05-13(batch)": {
+        name: "gpt-4o-2024-05-13 (Batch)",
+        desc: `2.50 in / 7.50 out (batch)`,
+        inputUSD: 2.50,
+        outputUSD: 7.50,
+        endpoint: "chat"
+      },
+
+      // ====================== GPT-4o mini ======================
+      "gpt-4o-mini(regular)": {
+        name: "gpt-4o-mini (regular)",
+        desc: `GPT-4o mini:
+0.150 in / 0.600 out x 1M tokens`,
+        inputUSD: 0.15,
+        outputUSD: 0.60,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini(batch)": {
+        name: "gpt-4o-mini (Batch)",
+        desc: `0.075 in / 0.300 out x 1M tokens`,
+        inputUSD: 0.075,
+        outputUSD: 0.30,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini(cached)": {
+        name: "gpt-4o-mini (Cached)",
+        desc: `0.075 in (cached) / 0.600 out`,
+        inputUSD: 0.075,
+        outputUSD: 0.60,
+        endpoint: "chat"
+      },
+
+      "gpt-4o-mini-2024-07-18(regular)": {
+        name: "gpt-4o-mini-2024-07-18 (regular)",
+        desc: `0.150 in / 0.600 out`,
+        inputUSD: 0.15,
+        outputUSD: 0.60,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini-2024-07-18(batch)": {
+        name: "gpt-4o-mini-2024-07-18 (Batch)",
+        desc: `0.075 in / 0.300 out`,
+        inputUSD: 0.075,
+        outputUSD: 0.30,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini-2024-07-18(cached)": {
+        name: "gpt-4o-mini-2024-07-18 (Cached)",
+        desc: `0.075 in (cached) / 0.600 out`,
+        inputUSD: 0.075,
+        outputUSD: 0.60,
+        endpoint: "chat"
+      },
+
+      "gpt-4o-mini-audio-preview(text)": {
+        name: "gpt-4o-mini-audio-preview (Text)",
+        desc: `Texto:
+0.150 in / 0.600 out
+Audio:
+10 / 20`,
+        inputUSD: 0.15,
+        outputUSD: 0.60,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini-audio-preview(audio)": {
+        name: "gpt-4o-mini-audio-preview (Audio)",
+        desc: `Audio:
+10 in / 20 out`,
+        inputUSD: 10.00,
+        outputUSD: 20.00,
+        endpoint: "audio"
+      },
+      "gpt-4o-mini-audio-preview-2024-12-17(text)": {
+        name: "gpt-4o-mini-audio-preview-2024-12-17 (Text)",
+        desc: `Texto: 0.150 in / 0.600 out,
+Audio: 10 / 20`,
+        inputUSD: 0.15,
+        outputUSD: 0.60,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini-audio-preview-2024-12-17(audio)": {
+        name: "gpt-4o-mini-audio-preview-2024-12-17 (Audio)",
+        desc: `Audio:
+10 in / 20 out`,
+        inputUSD: 10.00,
+        outputUSD: 20.00,
+        endpoint: "audio"
+      },
+
+      // ====================== OpenAI o1 ======================
+      "o1(regular)": {
+        name: "o1 (regular)",
+        desc: `o1:
+15.00 in / 60.00 out,
+cached=7.50 in`,
+        inputUSD: 15.00,
+        outputUSD: 60.00,
+        endpoint: "chat"
+      },
+      "o1(cached)": {
+        name: "o1 (cached)",
+        desc: `7.50 in / 60.00 out`,
+        inputUSD: 7.50,
+        outputUSD: 60.00,
+        endpoint: "chat"
+      },
+      "o1-2024-12-17": {
+        name: "o1-2024-12-17",
+        desc: `15 in / 60 out, con cutoff 2024-12-17`,
+        inputUSD: 15.00,
+        outputUSD: 60.00,
+        endpoint: "chat"
+      },
+      "o1-preview": {
+        name: "o1-preview",
+        desc: `Versión preview: 15 in / 60 out`,
+        inputUSD: 15.00,
+        outputUSD: 60.00,
+        endpoint: "chat"
+      },
+      "o1-preview-2024-09-12": {
+        name: "o1-preview-2024-09-12",
+        desc: `15 in / 60 out, fecha 2024-09-12`,
+        inputUSD: 15.00,
+        outputUSD: 60.00,
+        endpoint: "chat"
+      },
+
+      // ====================== OpenAI o1-mini ======================
+      "o1-mini(regular)": {
+        name: "o1-mini (regular)",
+        desc: `3.00 in / 12.00 out`,
+        inputUSD: 3.00,
+        outputUSD: 12.00,
+        endpoint: "chat"
+      },
+      "o1-mini(cached)": {
+        name: "o1-mini (cached)",
+        desc: `1.50 in / 12.00 out`,
+        inputUSD: 1.50,
+        outputUSD: 12.00,
+        endpoint: "chat"
+      },
+      "o1-mini-2024-09-12": {
+        name: "o1-mini-2024-09-12",
+        desc: `3 in / 12 out, versión 2024-09-12`,
+        inputUSD: 3.00,
+        outputUSD: 12.00,
+        endpoint: "chat"
+      },
+
+      // ====================== Embedding models ======================
+      "text-embedding-3-small(regular)": {
+        name: "text-embedding-3-small (regular)",
+        desc: `0.020 / 1M tokens (input), 0 output`,
+        inputUSD: 0.02,
+        outputUSD: 0,
+        endpoint: "embeddings"
+      },
+      "text-embedding-3-small(batch)": {
+        name: "text-embedding-3-small (Batch)",
+        desc: `0.010 / 1M tokens`,
+        inputUSD: 0.01,
+        outputUSD: 0,
+        endpoint: "embeddings"
+      },
+      "text-embedding-3-large(regular)": {
+        name: "text-embedding-3-large (regular)",
+        desc: `0.130 / 1M tokens`,
+        inputUSD: 0.13,
+        outputUSD: 0,
+        endpoint: "embeddings"
+      },
+      "text-embedding-3-large(batch)": {
+        name: "text-embedding-3-large (Batch)",
+        desc: `0.065 / 1M tokens`,
+        inputUSD: 0.065,
+        outputUSD: 0,
+        endpoint: "embeddings"
+      },
+      "ada-v2(regular)": {
+        name: "ada v2 (regular)",
+        desc: `0.100 / 1M tokens`,
+        inputUSD: 0.10,
+        outputUSD: 0,
+        endpoint: "embeddings"
+      },
+      "ada-v2(batch)": {
+        name: "ada v2 (Batch)",
+        desc: `0.050 / 1M tokens`,
+        inputUSD: 0.05,
+        outputUSD: 0,
+        endpoint: "embeddings"
+      },
+
+      // ====================== Fine-tuning models ======================
+      "gpt-4o-2024-08-06(training)": {
+        name: "gpt-4o-2024-08-06 (fine-tuning)",
+        desc: `3.750 in / 15.000 out
+Batch=1.875 in / 7.500 out
+training=25.000`,
+        inputUSD: 3.75,
+        outputUSD: 15.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini-2024-07-18(training)": {
+        name: "gpt-4o-mini-2024-07-18 (fine-tuning)",
+        desc: `0.300 in / 1.200 out, training=3.000`,
+        inputUSD: 0.30,
+        outputUSD: 1.20,
+        endpoint: "chat"
+      },
+      "gpt-3.5-turbo(training)": {
+        name: "gpt-3.5-turbo (fine-tuning)",
+        desc: `3.000 in / 6.000 out, training=8.000`,
+        inputUSD: 3.00,
+        outputUSD: 6.00,
+        endpoint: "chat"
+      },
+      "davinci-002(training)": {
+        name: "davinci-002 (fine-tuning)",
+        desc: `12.000 in / 12.000 out, training=6.000`,
+        inputUSD: 12.00,
+        outputUSD: 12.00,
+        endpoint: "chat"
+      },
+      "babbage-002(training)": {
+        name: "babbage-002 (fine-tuning)",
+        desc: `1.600 in / 1.600 out, training=0.400`,
+        inputUSD: 1.60,
+        outputUSD: 1.60,
+        endpoint: "chat"
+      },
+
+      // ====================== Realtime API ======================
+      "gpt-4o-realtime-preview(text)": {
+        name: "gpt-4o-realtime-preview (Text)",
+        desc: `Text: 5.00 in / 20.00 out
+Cached: 2.50 in
+Audio: 100/200`,
+        inputUSD: 5.00,
+        outputUSD: 20.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-realtime-preview(audio)": {
+        name: "gpt-4o-realtime-preview (Audio)",
+        desc: `Audio: 100 in / 200 out
+Cached=20 in`,
+        inputUSD: 100.00,
+        outputUSD: 200.00,
+        endpoint: "audio"
+      },
+      "gpt-4o-realtime-preview-2024-12-17(text)": {
+        name: "gpt-4o-realtime-preview-2024-12-17 (Text)",
+        desc: `5.00 in / 20.00 out, cached=2.50`,
+        inputUSD: 5.00,
+        outputUSD: 20.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-realtime-preview-2024-12-17(audio)": {
+        name: "gpt-4o-realtime-preview-2024-12-17 (Audio)",
+        desc: `40 in / 80 out, cached=2.50?`,
+        inputUSD: 40.00,
+        outputUSD: 80.00,
+        endpoint: "audio"
+      },
+      "gpt-4o-realtime-preview-2024-10-01(text)": {
+        name: "gpt-4o-realtime-preview-2024-10-01 (Text)",
+        desc: `5 in / 20 out, cached=2.50`,
+        inputUSD: 5.00,
+        outputUSD: 20.00,
+        endpoint: "chat"
+      },
+      "gpt-4o-realtime-preview-2024-10-01(audio)": {
+        name: "gpt-4o-realtime-preview-2024-10-01 (Audio)",
+        desc: `100 in / 200 out, cached=20 in`,
+        inputUSD: 100.00,
+        outputUSD: 200.00,
+        endpoint: "audio"
+      },
+      "gpt-4o-mini-realtime-preview(text)": {
+        name: "gpt-4o-mini-realtime-preview (Text)",
+        desc: `0.60 in / 2.40 out, cached=0.30 in
+Audio=10/20`,
+        inputUSD: 0.60,
+        outputUSD: 2.40,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini-realtime-preview(audio)": {
+        name: "gpt-4o-mini-realtime-preview (Audio)",
+        desc: `10 in / 20 out, cached=0.30 in`,
+        inputUSD: 10.00,
+        outputUSD: 20.00,
+        endpoint: "audio"
+      },
+      "gpt-4o-mini-realtime-preview-2024-12-17(text)": {
+        name: "gpt-4o-mini-realtime-preview-2024-12-17 (Text)",
+        desc: `0.60 in / 2.40 out, cached=0.30`,
+        inputUSD: 0.60,
+        outputUSD: 2.40,
+        endpoint: "chat"
+      },
+      "gpt-4o-mini-realtime-preview-2024-12-17(audio)": {
+        name: "gpt-4o-mini-realtime-preview-2024-12-17 (Audio)",
+        desc: `10 in / 20 out, cached=0.30 in`,
+        inputUSD: 10.00,
+        outputUSD: 20.00,
+        endpoint: "audio"
+      },
+
+      // ====================== Otros Models (ChatGPT, GPT-4, etc.) ======================
+      "chatgpt-4o-latest": {
+        name: "chatgpt-4o-latest",
+        desc: `5.00 in / 15.00 out x 1M tokens`,
+        inputUSD: 5.00,
+        outputUSD: 15.00,
+        endpoint: "chat"
+      },
+      "gpt-4-turbo": {
+        name: "gpt-4-turbo",
+        desc: `10.00 in / 30.00 out`,
+        inputUSD: 10.00,
+        outputUSD: 30.00,
+        endpoint: "chat"
+      },
+      "gpt-4": {
+        name: "gpt-4",
+        desc: `30.00 in / 60.00 out`,
+        inputUSD: 30.00,
+        outputUSD: 60.00,
+        endpoint: "chat"
+      },
+      "gpt-4-32k": {
+        name: "gpt-4-32k",
+        desc: `60.00 in / 120.00 out`,
+        inputUSD: 60.00,
+        outputUSD: 120.00,
+        endpoint: "chat"
+      },
+      "gpt-3.5-turbo-0125": {
+        name: "gpt-3.5-turbo-0125",
+        desc: `0.50 in / 1.50 out`,
+        inputUSD: 0.50,
+        outputUSD: 1.50,
+        endpoint: "chat"
+      },
+      "gpt-3.5-turbo-instruct": {
+        name: "gpt-3.5-turbo-instruct",
+        desc: `1.50 in / 2.00 out`,
+        inputUSD: 1.50,
+        outputUSD: 2.00,
+        endpoint: "chat"
+      },
+      "gpt-3.5-turbo-1106": {
+        name: "gpt-3.5-turbo-1106",
+        desc: `1.00 in / 2.00 out`,
+        inputUSD: 1.00,
+        outputUSD: 2.00,
+        endpoint: "chat"
+      },
+      "gpt-3.5-turbo-0613": {
+        name: "gpt-3.5-turbo-0613",
+        desc: `1.50 in / 2.00 out`,
+        inputUSD: 1.50,
+        outputUSD: 2.00,
+        endpoint: "chat"
+      },
+      "gpt-3.5-turbo-16k-0613": {
+        name: "gpt-3.5-turbo-16k-0613",
+        desc: `3.00 in / 4.00 out`,
+        inputUSD: 3.00,
+        outputUSD: 4.00,
+        endpoint: "chat"
+      },
+      "gpt-3.5-turbo-0301": {
+        name: "gpt-3.5-turbo-0301",
+        desc: `1.50 in / 2.00 out`,
+        inputUSD: 1.50,
+        outputUSD: 2.00,
+        endpoint: "chat"
+      },
+      "davinci-002": {
+        name: "davinci-002",
+        desc: `2.00 in / 2.00 out`,
+        inputUSD: 2.00,
+        outputUSD: 2.00,
+        endpoint: "chat"
+      },
+      "babbage-002": {
+        name: "babbage-002",
+        desc: `0.40 in / 0.40 out`,
+        inputUSD: 0.40,
+        outputUSD: 0.40,
+        endpoint: "chat"
+      }
+    };
+
+    /********************************************************************
+     * 3) Referencias al DOM
+     ********************************************************************/
+    const apiKeyInput        = document.getElementById("apiKey");
+    const apiKeyError        = document.getElementById("apiKeyError");
+    const modelSelect        = document.getElementById("modelSelect");
+    const modelDesc          = document.getElementById("modelDesc");
+
+    const inputTokensField   = document.getElementById("inputTokens");
+    const outputTokensField  = document.getElementById("outputTokens");
+    const reasoningTokensField = document.getElementById("reasoningTokens");
+    const estTotalCost       = document.getElementById("estTotalCost");
+
+    const chatContainer      = document.getElementById("chatContainer");
+    const promptInput        = document.getElementById("promptInput");
+    const sendButton         = document.getElementById("sendButton");
+    const fileInput          = document.getElementById("fileInput");
+
+    // Historial de chat para endpoints "chat"
+    let chatMessages = [];
+
+    /********************************************************************
+     * 4) Inicializar la lista de modelos en el <select>
+     ********************************************************************/
+    function initModelSelect() {
+      Object.keys(MODELS).forEach(modelKey => {
+        const info = MODELS[modelKey];
+        const opt = document.createElement("option");
+        opt.value = modelKey;
+        opt.textContent = info.name;
+        modelSelect.appendChild(opt);
+      });
+      modelSelect.addEventListener("change", updateModelInfo);
+      updateModelInfo();
+    }
+
+    function updateModelInfo() {
+      const selected = modelSelect.value;
+      if (MODELS[selected]) {
+        modelDesc.textContent = MODELS[selected].desc || "";
+      } else {
+        modelDesc.textContent = "";
+      }
+      recalcCost();
+    }
+
+    /********************************************************************
+     * 5) Recalcular el costo total (en MXN) cuando cambian
+     *    los tokens o se cambia de modelo.
+     ********************************************************************/
+    function recalcCost() {
+      const selKey = modelSelect.value;
+      if (!MODELS[selKey]) {
+        estTotalCost.textContent = "0.00";
+        return;
+      }
+      const model = MODELS[selKey];
+
+      const inT     = parseInt(inputTokensField.value)     || 0;
+      const outT    = parseInt(outputTokensField.value)    || 0;
+      const reasonT = parseInt(reasoningTokensField.value) || 0;
+
+      // Costo en USD
+      const costInUSD  = (model.inputUSD  / 1000000) * inT;
+      const costOutUSD = (model.outputUSD / 1000000) * outT;
+      // Suponemos que si "reasoningUSD" existiera, lo usaríamos, 
+      // pero la mayoría de estos no lo especifican => se ignora.
+      const costReasonUSD = 0; 
+      // Si tuvieras un valor "model.reasoningUSD", podrías sumarlo:
+      // const costReasonUSD = (model.reasoningUSD || 0) / 1000000 * reasonT;
+
+      const totalUSD = costInUSD + costOutUSD + costReasonUSD;
+      const totalMXN = totalUSD * USD_TO_MXN;
+
+      estTotalCost.textContent = totalMXN.toFixed(2);
+    }
+
+    // Al cambiar manualmente los <input type="number">
+    inputTokensField.addEventListener("change", recalcCost);
+    outputTokensField.addEventListener("change", recalcCost);
+    reasoningTokensField.addEventListener("change", recalcCost);
+
+    /********************************************************************
+     * 6) Cálculo automático de tokens según el prompt (opcional)
+     *    Ajusta inputTokens, outputTokens, reasoningTokens
+     ********************************************************************/
+    promptInput.addEventListener("input", () => {
+      const text = promptInput.value.trim();
+      if (!text) {
+        inputTokensField.value = "0";
+        outputTokensField.value = "0";
+        reasoningTokensField.value = "0";
+        recalcCost();
+        return;
+      }
+      const words = text.split(/\s+/).length;
+      // Supongamos 1.33 tokens por palabra
+      const inTok = Math.round(words * 1.33);
+      // outTok ~ 120% de inTok
+      const outTok = Math.round(inTok * 1.2);
+      // reasonTok ~ 20% de inTok
+      const reasonTok = Math.round(inTok * 0.2);
+
+      inputTokensField.value = inTok;
+      outputTokensField.value = outTok;
+      reasoningTokensField.value = reasonTok;
+      recalcCost();
+    });
+
+    /********************************************************************
+     * 7) Mostrar mensajes en el historial (chatContainer)
+     ********************************************************************/
+    function addMessage(role, text) {
+      const div = document.createElement("div");
+      div.classList.add("chat-message", role);
+
+      const authorDiv = document.createElement("div");
+      authorDiv.classList.add("author");
+      authorDiv.textContent = (role === "user") 
+        ? "Tú:" 
+        : (role === "assistant") 
+        ? "Asistente:" 
+        : "Sistema:";
+
+      const contentDiv = document.createElement("div");
+      contentDiv.classList.add("content");
+      contentDiv.innerHTML = text;
+
+      div.appendChild(authorDiv);
+      div.appendChild(contentDiv);
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    /********************************************************************
+     * 8) Función para enviar la solicitud al endpoint apropiado
+     ********************************************************************/
+    async function sendRequest() {
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        apiKeyError.textContent = "Por favor, ingresa tu API Key.";
+        apiKeyError.style.display = "block";
+        return;
+      } else {
+        apiKeyError.style.display = "none";
+      }
+
+      const selKey = modelSelect.value;
+      const modelInfo = MODELS[selKey];
+      if (!modelInfo) {
+        alert("Modelo inválido.");
+        return;
+      }
+
+      const promptText = promptInput.value.trim();
+      if (!promptText) {
+        // No enviamos nada si está vacío
+        return;
+      }
+
+      // Mostrar el mensaje del usuario en el chat
+      addMessage("user", promptText);
+
+      let assistantReply = "";
+      try {
+        if (modelInfo.endpoint === "chat") {
+          // Chat Completions
+          chatMessages.push({ role: "user", content: promptText });
+
+          const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: selKey,
+              messages: chatMessages
+            })
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(()=>{});
+            throw new Error(errData.error?.message || resp.statusText);
+          }
+          const data = await resp.json();
+          assistantReply = data.choices?.[0]?.message?.content || "(Sin respuesta)";
+          chatMessages.push({ role: "assistant", content: assistantReply });
+
+        } else if (modelInfo.endpoint === "images") {
+          // DALL·E
+          const resp = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              prompt: promptText,
+              n: 1,
+              size: "1024x1024"
+            })
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(()=>{});
+            throw new Error(errData.error?.message || resp.statusText);
+          }
+          const data = await resp.json();
+          const url = data.data?.[0]?.url;
+          if (url) {
+            assistantReply = `<img src="${url}" alt="Imagen generada" style="max-width:300px;">`;
+          } else {
+            assistantReply = "(No se generó imagen)";
+          }
+
+        } else if (modelInfo.endpoint === "audio") {
+          // Whisper / TTS / Realtime (simulado)
+          assistantReply = "(Procesamiento de audio no implementado en este demo)";
+
+        } else if (modelInfo.endpoint === "embeddings") {
+          // Embeddings
+          const resp = await fetch("https://api.openai.com/v1/embeddings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: selKey,
+              input: promptText
+            })
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(()=>{});
+            throw new Error(errData.error?.message || resp.statusText);
+          }
+          const data = await resp.json();
+          const vector = data.data?.[0]?.embedding;
+          assistantReply = JSON.stringify(vector, null, 2);
+
+        } else {
+          // No implementado
+          assistantReply = "(Endpoint no implementado)";
+        }
+      } catch (e) {
+        console.error("Error en la API:", e);
+        assistantReply = "Error: " + e.message;
+      }
+
+      addMessage("assistant", assistantReply);
+
+      // Limpiamos el prompt
+      promptInput.value = "";
+      // Recalcular tokens => 0
+      inputTokensField.value = "0";
+      outputTokensField.value = "0";
+      reasoningTokensField.value = "0";
+      recalcCost();
+    }
+
+    sendButton.addEventListener("click", sendRequest);
+
+    /********************************************************************
+     * 9) Manejo de archivos (demo)
+     ********************************************************************/
+    fileInput.addEventListener("change", (event) => {
+      const files = event.target.files;
+      if (!files || !files.length) return;
+      let msg = "Archivos subidos:<br/>";
+      for (let i=0; i<files.length; i++){
+        msg += `- ${files[i].name} (${(files[i].size/1024).toFixed(1)} KB)<br/>`;
+      }
+      addMessage("user", msg + "<i>(Por implementar envío a la API)</i>");
+    });
+
+    /********************************************************************
+     * 10) Inicialización
+     ********************************************************************/
+    initModelSelect();
+    // tokens = 0 al inicio
+    recalcCost();
+  </script>
+</body>
+</html>

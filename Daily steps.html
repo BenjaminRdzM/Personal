@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Actividades Diarias</title>
+    <style>
+        /* CSS Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        /* Formulario de Agregar Actividades */
+        #add-activity-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        #add-activity-form input, #add-activity-form select, #add-activity-form button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        #add-activity-form button {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        #add-activity-form button:hover {
+            background-color: #218838;
+        }
+
+        /* Lista de Tareas */
+        #tasks {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-item input[type="checkbox"] {
+            transform: scale(1.5);
+            margin-right: 10px;
+        }
+
+        .task-details {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .task-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 10px;
+            color: #007bff;
+        }
+
+        .task-actions button:hover {
+            text-decoration: underline;
+        }
+
+        /* Sección de Desempeño */
+        #performance {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .calendar div {
+            padding: 10px;
+            background-color: #e9ecef;
+            text-align: center;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .calendar div.completed {
+            background-color: #28a745;
+            color: #fff;
+        }
+
+        .calendar div.failed {
+            background-color: #dc3545;
+            color: #fff;
+        }
+
+        .overall-stats {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Responsividad */
+        @media (max-width: 600px) {
+            .task-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .task-actions {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Control de Actividades Diarias</h1>
+
+        <!-- Formulario para Agregar Actividades -->
+        <form id="add-activity-form">
+            <h2>Agregar Nueva Actividad</h2>
+            <input type="text" id="activity-name" placeholder="Nombre de la actividad" required>
+            <select id="activity-frequency">
+                <option value="today">Hoy</option>
+                <option value="daily">Diario</option>
+                <option value="weekly">Ciertos días de la semana</option>
+            </select>
+            <div id="weekly-options" style="display: none;">
+                <label><input type="checkbox" value="1"> Lunes</label>
+                <label><input type="checkbox" value="2"> Martes</label>
+                <label><input type="checkbox" value="3"> Miércoles</label>
+                <label><input type="checkbox" value="4"> Jueves</label>
+                <label><input type="checkbox" value="5"> Viernes</label>
+                <label><input type="checkbox" value="6"> Sábado</label>
+                <label><input type="checkbox" value="0"> Domingo</label>
+            </div>
+            <input type="number" id="activity-duration" placeholder="Duración (días)" min="1" value="1">
+            <button type="submit" id="add-activity-button">Agregar Actividad</button>
+        </form>
+
+        <!-- Lista de Tareas del Día -->
+        <div id="tasks">
+            <h2>Tareas de Hoy</h2>
+            <div id="tasks-list">
+                <!-- Las tareas se agregarán aquí dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Sección de Desempeño -->
+        <div id="performance">
+            <h2>Desempeño</h2>
+            <div class="calendar" id="calendar">
+                <!-- Calendario dinámico -->
+            </div>
+            <div class="overall-stats" id="overall-stats">
+                <!-- Estadísticas generales -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Función para obtener la fecha actual en formato YYYY-MM-DD
+        function getTodayDate() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Función para obtener el día de la semana (0: Domingo, 6: Sábado)
+        function getDayOfWeek() {
+            const today = new Date();
+            return today.getDay();
+        }
+
+        // Inicializar actividades desde localStorage
+        let activities = JSON.parse(localStorage.getItem('activities')) || [];
+        let performance = JSON.parse(localStorage.getItem('performance')) || {};
+
+        // Mostrar u ocultar opciones de días de la semana
+        document.getElementById('activity-frequency').addEventListener('change', function() {
+            if (this.value === 'weekly') {
+                document.getElementById('weekly-options').style.display = 'block';
+            } else {
+                document.getElementById('weekly-options').style.display = 'none';
+            }
+        });
+
+        // Agregar una nueva actividad
+        document.getElementById('add-activity-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Evita el comportamiento por defecto del formulario
+            const name = document.getElementById('activity-name').value.trim();
+            const frequency = document.getElementById('activity-frequency').value;
+            let days = [];
+            if (frequency === 'weekly') {
+                const checkboxes = document.querySelectorAll('#weekly-options input[type="checkbox"]:checked');
+                checkboxes.forEach(cb => days.push(parseInt(cb.value)));
+                if (days.length === 0) {
+                    alert('Selecciona al menos un día de la semana.');
+                    return;
+                }
+            }
+            const duration = parseInt(document.getElementById('activity-duration').value);
+            if (name === '' || isNaN(duration) || duration < 1) {
+                alert('Por favor, completa todos los campos correctamente.');
+                return;
+            }
+
+            const newActivity = {
+                id: Date.now(),
+                name,
+                frequency,
+                days, // Solo si es semanal
+                duration,
+                startDate: getTodayDate(),
+                completedDates: []
+            };
+
+            activities.push(newActivity);
+            localStorage.setItem('activities', JSON.stringify(activities));
+            document.getElementById('add-activity-form').reset(); // Ahora funciona correctamente
+            document.getElementById('weekly-options').style.display = 'none';
+            renderTasks();
+            renderCalendar();
+            renderOverallStats();
+        });
+
+        // Renderizar las tareas del día
+        function renderTasks() {
+            const tasksList = document.getElementById('tasks-list');
+            tasksList.innerHTML = '';
+            const today = getTodayDate();
+            const todayDay = getDayOfWeek();
+
+            activities.forEach(activity => {
+                // Verificar si la actividad debe mostrarse hoy
+                let show = false;
+                if (activity.frequency === 'today') {
+                    show = activity.startDate === today;
+                } else if (activity.frequency === 'daily') {
+                    show = true;
+                } else if (activity.frequency === 'weekly') {
+                    show = activity.days.includes(todayDay);
+                }
+
+                // Verificar la duración
+                if (show) {
+                    const start = new Date(activity.startDate);
+                    const end = new Date(start);
+                    end.setDate(end.getDate() + activity.duration);
+                    const current = new Date(today);
+                    if (current > end) {
+                        show = false;
+                    }
+                }
+
+                if (show) {
+                    const taskItem = document.createElement('div');
+                    taskItem.className = 'task-item';
+
+                    const taskDetails = document.createElement('div');
+                    taskDetails.className = 'task-details';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    const isCompleted = activity.completedDates.includes(today);
+                    checkbox.checked = isCompleted;
+                    checkbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            if (!activity.completedDates.includes(today)) {
+                                activity.completedDates.push(today);
+                            }
+                        } else {
+                            activity.completedDates = activity.completedDates.filter(date => date !== today);
+                        }
+                        localStorage.setItem('activities', JSON.stringify(activities));
+                        renderCalendar();
+                        renderOverallStats();
+                    });
+
+                    const label = document.createElement('label');
+                    label.textContent = activity.name;
+
+                    taskDetails.appendChild(checkbox);
+                    taskDetails.appendChild(label);
+
+                    const taskActions = document.createElement('div');
+                    taskActions.className = 'task-actions';
+
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Editar';
+                    editBtn.addEventListener('click', function() {
+                        editActivity(activity.id);
+                    });
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Eliminar';
+                    deleteBtn.addEventListener('click', function() {
+                        if (confirm('¿Estás seguro de eliminar esta actividad?')) {
+                            activities = activities.filter(act => act.id !== activity.id);
+                            localStorage.setItem('activities', JSON.stringify(activities));
+                            renderTasks();
+                            renderCalendar();
+                            renderOverallStats();
+                        }
+                    });
+
+                    taskActions.appendChild(editBtn);
+                    taskActions.appendChild(deleteBtn);
+
+                    taskItem.appendChild(taskDetails);
+                    taskItem.appendChild(taskActions);
+
+                    tasksList.appendChild(taskItem);
+                }
+            });
+        }
+
+        // Editar una actividad
+        function editActivity(id) {
+            const activity = activities.find(act => act.id === id);
+            if (!activity) return;
+
+            const newName = prompt('Editar nombre de la actividad:', activity.name);
+            if (newName === null) return; // Cancelado
+            const trimmedName = newName.trim();
+            if (trimmedName === '') {
+                alert('El nombre no puede estar vacío.');
+                return;
+            }
+
+            const newFrequency = prompt('Editar frecuencia (today, daily, weekly):', activity.frequency);
+            if (!['today', 'daily', 'weekly'].includes(newFrequency)) {
+                alert('Frecuencia inválida.');
+                return;
+            }
+
+            let newDays = [];
+            if (newFrequency === 'weekly') {
+                const daysInput = prompt('Editar días (0: Domingo, 1: Lunes, ..., 6: Sábado) separados por comas:', activity.days.join(','));
+                if (daysInput === null) return;
+                newDays = daysInput.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d >=0 && d <=6);
+                if (newDays.length === 0) {
+                    alert('Debe seleccionar al menos un día.');
+                    return;
+                }
+            }
+
+            const newDuration = parseInt(prompt('Editar duración (días):', activity.duration));
+            if (isNaN(newDuration) || newDuration < 1) {
+                alert('Duración inválida.');
+                return;
+            }
+
+            // Actualizar la actividad
+            activity.name = trimmedName;
+            activity.frequency = newFrequency;
+            activity.days = newFrequency === 'weekly' ? newDays : [];
+            activity.duration = newDuration;
+            localStorage.setItem('activities', JSON.stringify(activities));
+            renderTasks();
+            renderCalendar();
+            renderOverallStats();
+        }
+
+        // Renderizar el calendario de desempeño
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+
+            // Obtener el primer y último día del mes
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const numDays = lastDay.getDate();
+
+            for (let day = 1; day <= numDays; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = date.toISOString().split('T')[0];
+                const dayOfWeek = date.getDay();
+
+                // Calcular el porcentaje de tareas completadas
+                let tasksForDay = 0;
+                let tasksCompleted = 0;
+
+                activities.forEach(activity => {
+                    let show = false;
+                    if (activity.frequency === 'today') {
+                        show = activity.startDate === dateStr;
+                    } else if (activity.frequency === 'daily') {
+                        show = true;
+                    } else if (activity.frequency === 'weekly') {
+                        show = activity.days.includes(dayOfWeek);
+                    }
+
+                    if (show) {
+                        const start = new Date(activity.startDate);
+                        const end = new Date(start);
+                        end.setDate(end.getDate() + activity.duration);
+                        if (date >= start && date <= end) {
+                            tasksForDay++;
+                            if (activity.completedDates.includes(dateStr)) {
+                                tasksCompleted++;
+                            }
+                        }
+                    }
+                });
+
+                let statusClass = '';
+                if (tasksForDay > 0) {
+                    const percentage = (tasksCompleted / tasksForDay) * 100;
+                    if (percentage === 100) {
+                        statusClass = 'completed';
+                    } else if (percentage > 0) {
+                        statusClass = 'failed';
+                    }
+                }
+
+                const dayDiv = document.createElement('div');
+                dayDiv.textContent = day;
+                if (statusClass) {
+                    dayDiv.classList.add(statusClass);
+                    dayDiv.title = `${tasksCompleted}/${tasksForDay} tareas completadas`;
+                }
+                calendar.appendChild(dayDiv);
+            }
+        }
+
+        // Renderizar estadísticas generales
+        function renderOverallStats() {
+            const overallStats = document.getElementById('overall-stats');
+            let totalTasks = 0;
+            let completedTasks = 0;
+
+            activities.forEach(activity => {
+                // Calcular el número de días activos
+                const start = new Date(activity.startDate);
+                const today = new Date(getTodayDate());
+                const end = new Date(start);
+                end.setDate(end.getDate() + activity.duration);
+                const effectiveEnd = today < end ? today : end;
+                const timeDiff = effectiveEnd - start;
+                const daysActive = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+
+                if (daysActive < 0) return; // Actividad aún no comienza
+
+                // Calcular tareas esperadas
+                let expected = 0;
+                if (activity.frequency === 'today') {
+                    if (activity.startDate <= getTodayDate() && getTodayDate() <= end.toISOString().split('T')[0]) {
+                        expected += 1;
+                    }
+                } else if (activity.frequency === 'daily') {
+                    expected += daysActive;
+                } else if (activity.frequency === 'weekly') {
+                    const weeks = Math.floor(daysActive / 7);
+                    const extraDays = daysActive % 7;
+                    expected += activity.days.length * weeks;
+
+                    // Contar los días adicionales
+                    for (let i = 0; i < extraDays; i++) {
+                        const day = (start.getDay() + i) % 7;
+                        if (activity.days.includes(day)) {
+                            expected += 1;
+                        }
+                    }
+                }
+
+                totalTasks += expected;
+                completedTasks += activity.completedDates.length;
+            });
+
+            const percentage = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(2) : 0;
+            overallStats.innerHTML = `<h3>Estadísticas Generales</h3><p>Has completado el ${percentage}% de tus actividades propuestas este año.</p>`;
+        }
+
+        // Inicialización
+        renderTasks();
+        renderCalendar();
+        renderOverallStats();
+    </script>
+</body>
+</html>
